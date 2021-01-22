@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" type="text/css" href="http://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap.min.css">
+<link rel="stylesheet" href="styling.css">
+<title>Smart Vending machine</title>
+<style type="text/css">p {font-size: x-large}</style>
+</head>
+<body>
+	<div class="container text-center">
+		<div id="normal">
+			<br>
+			<header>
+				<img src="logo_crop_white_color_slogan.png" width="600px"alt="logo smart vendors">
+			</header>
+			<br>
+			<form method="GET">
+				<p id=message>welkom op onze smart vending machine</p>
+				<p id=scanKnop>
+				<input class="btn btn-lg accent1" id="switchScan" value="Scan mijn QR-code" type="button">
+				</p>
+			</form>
+		</div>
+		
+
+		<div id=warning style="display: none;">
+			<img src="Warning.png" width="600px" alt="warning">
+			<p>Please be careful for this wonderful machine!</p>
+		</div>
+	</div>
+
+<!-- de pubnub bibliotheek en de javascript bibliotheek wordt toegevoegd-->
+<script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.0.13.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+<script>
+(function() {
+	var channel = 'scanner'; // This is the channel name you choose in python
+	// we maken hier een nieuw pubnub object aan waar we de publish en subscribe keys meegeven
+	var pubnub = new PubNub({
+	subscribeKey: 'sub-c-4a5481fa-5a4d-11eb-bf6e-f20b4949e6d2',
+	publishKey: 'pub-c-f9d086de-b97a-43ce-bff5-e6cb64ecf29d'
+	});
+
+	var welcomeMessage = "welkom op onze smart vending machine";
+	var handGelMessage = "hier is uw handgel";
+	var handGelOutOfStockMessage = "sorry we hebben geen hand gel meer";
+	var authenticationFailedMessage = "u kon niet ingelogd geraken, probeer opnieuw aub";
+	var errorMessage = "er is iets foutgelopen";
+
+	// Sending data
+	$('#switchScan').on('mousedown', function scan(){
+		pubnub.publish({
+		channel : channel,
+		message : 'scan'
+		});
+		var x = document.getElementById("scanKnop");
+		x.style.display = "none";
+	})
+	$('#switchGet').on('mousedown', function get(){
+		pubnub.publish({
+		channel : channel,
+		message : 'get'
+		});
+	})
+	function displayWelcome(){
+		document.getElementById("message").innerHTML = welcomeMessage;
+		x = document.getElementById("scanKnop");
+		x.style.display = "block";
+	}
+	pubnub.subscribe({channels: ['scanner']});
+		pubnub.addListener({
+			message: function (m){
+				console.log(m.message);
+				if(m.message.indexOf("handGelMessage") >=0){
+					handGelMessage = m.message.substr(14);
+					document.getElementById("message").innerHTML = handGelMessage;
+					window.setTimeout(displayWelcome, 10000);
+				}
+				else if(m.message.indexOf("welcomeMessage") >=0){
+					welcomeMessage = m.message.substr(14);
+				}
+				else if(m.message == "warning"){
+					var x = document.getElementById("normal");
+					x.style.display = "none";
+					x = document.getElementById("warning");
+					x.style.display = "block";
+				}
+				else if(m.message == "warningDone"){
+					var x = document.getElementById("normal");
+					x.style.display = "block";
+					x = document.getElementById("warning");
+					x.style.display = "none";
+				}
+				else if(m.message.indexOf("errorMessage") >=0){
+					errorMessage = m.message.substr(12);
+					document.getElementById("message").innerHTML = errorMessage;
+					window.setTimeout(displayWelcome, 10000);
+				}
+			}
+		})
+})();
+</script>
+</body>
+</html>
