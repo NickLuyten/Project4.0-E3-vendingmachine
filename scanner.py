@@ -33,6 +33,8 @@ GPIO.setmode(GPIO.BCM)
 GPIO.setup(sensor, GPIO.IN)
 GPIO.setwarnings(False)
 
+servoPIN = 18
+
 step1in1 = 5
 step1in2 = 6
 step1in3 = 13
@@ -43,10 +45,13 @@ step2in2 = 12
 step2in3 = 16
 step2in4 = 20
 
-allPins = [5,6,13,19,1,12,16,20]
+allPins = [step1in1,step1in2,step1in3,step1in4,step2in1,step2in2,step2in3,step2in4,servoPIN]
 # Set all pins as output
 for pin in allPins:
         GPIO.setup(pin,GPIO.OUT)
+
+p = GPIO.PWM(servoPIN, 50) # GPIO 18 for PWM with 50Hz
+#p.start(7.5) # Initialization
 
 global scanner
 scanner = 0
@@ -75,8 +80,18 @@ def callback(sensor):
     global warning 
     warning = 1
     
+def servomotor(status):
+    p.start(7.5) # Initialization
+    if status == "open":
+        p.ChangeDutyCycle(5)
+    elif status == "close":
+        p.ChangeDutyCycle(7.5)
+        time.sleep(0.5)
+        p.stop()
+
 def stepper(stepper, delay):
     stepper = stepper
+    servomotor("open")
     if(stepper ==1):
         for i in range(510):
             GPIO.output(step1in1 , 1)
@@ -111,6 +126,7 @@ def stepper(stepper, delay):
             GPIO.output(step2in4, 1)
             time.sleep(delay)
             GPIO.output(step2in4, 0)    
+    servomotor("close")
 
 print('Listening...') 
 pubnub.add_listener(MySubscribeCallback_ITF()) 

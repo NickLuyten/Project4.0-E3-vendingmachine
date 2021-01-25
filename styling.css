@@ -2,6 +2,9 @@
     background-color: #0192AD;
     color: white;
 }
-button {
-    size: 500px;
+.btn-xl {
+    padding: 40px 80px;
+    font-size: 25px;
+    border-radius: 10px;
+    width:50%;
 }
