@@ -1,3 +1,4 @@
+  
 import RPi.GPIO as GPIO
 import time
 
@@ -20,35 +21,44 @@ for pin in allPins:
         GPIO.setup(pin,GPIO.OUT)
 
 
-def stepper(delay):
+def stepper(stepper, delay):
+    stepper = stepper
+    if(stepper ==1):
         for i in range(510):
             GPIO.output(step1in1 , 1)
-            GPIO.output(step2in1 , 1)
             time.sleep(delay)
-
             GPIO.output(step1in1 , 0)
-            GPIO.output(step2in1 , 0)
+
             GPIO.output(step1in2 , 1)
-            GPIO.output(step2in2 , 1)
             time.sleep(delay)
-
             GPIO.output(step1in2, 0)
-            GPIO.output(step2in2, 0)
+
             GPIO.output(step1in3, 1)
-            GPIO.output(step2in3, 1)
             time.sleep(delay)
-
             GPIO.output(step1in3, 0)
-            GPIO.output(step2in3, 0)
-            GPIO.output(step1in4, 1)
-            GPIO.output(step2in4, 1)
 
+            GPIO.output(step1in4, 1)
             time.sleep(delay)
             GPIO.output(step1in4, 0)
+    if(stepper ==2):
+        for i in range(510):
+            GPIO.output(step2in1 , 1)
+            time.sleep(delay)
+            GPIO.output(step2in1 , 0)
+
+            GPIO.output(step2in2 , 1)
+            time.sleep(delay)
+            GPIO.output(step2in2, 0)
+
+            GPIO.output(step2in3, 1)
+            time.sleep(delay)
+            GPIO.output(step2in3, 0)
+
+            GPIO.output(step2in4, 1)
+            time.sleep(delay)
             GPIO.output(step2in4, 0)
 
 
 while True: 
-    stepper(0.004)
-
-
+    stepper(1,0.004)
+    #stepper(2,0.004)

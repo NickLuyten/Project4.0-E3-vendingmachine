@@ -14,6 +14,7 @@ handGelMessage = "hier is uw handgel"
 handGelOutOfStockMessage = "sorry we hebben geen hand gel meer"
 authenticationFailedMessage = "u kon niet ingelogd geraken, probeer opnieuw aub"
 errorMessage = "er is iets foutgelopen"
+limitHandSanitizerReacedMessage = "maximum bereikt"
 stock = 10
 error = ""
  
@@ -89,43 +90,33 @@ def servomotor(status):
         time.sleep(0.5)
         p.stop()
 
-def stepper(stepper, delay):
-    stepper = stepper
+def stepper(delay):
     servomotor("open")
-    if(stepper ==1):
-        for i in range(510):
-            GPIO.output(step1in1 , 1)
-            time.sleep(delay)
-            GPIO.output(step1in1 , 0)
+    for i in range(520):
+        GPIO.output(step2in1 , 1)
+        GPIO.output(step2in2 , 1)
 
-            GPIO.output(step1in2 , 1)
-            time.sleep(delay)
-            GPIO.output(step1in2, 0)
+        time.sleep(delay)
 
-            GPIO.output(step1in3, 1)
-            time.sleep(delay)
-            GPIO.output(step1in3, 0)
+        GPIO.output(step2in1 , 0)
+        GPIO.output(step2in2 , 1)
+        GPIO.output(step2in3 , 1)
 
-            GPIO.output(step1in4, 1)
-            time.sleep(delay)
-            GPIO.output(step1in4, 0)
-    if(stepper ==2):
-        for i in range(510):
-            GPIO.output(step2in1 , 1)
-            time.sleep(delay)
-            GPIO.output(step2in1 , 0)
+        time.sleep(delay)
 
-            GPIO.output(step2in2 , 1)
-            time.sleep(delay)
-            GPIO.output(step2in2, 0)
+        GPIO.output(step2in2, 0)
+        GPIO.output(step2in3, 1)
+        GPIO.output(step2in4, 1)
 
-            GPIO.output(step2in3, 1)
-            time.sleep(delay)
-            GPIO.output(step2in3, 0)
+        time.sleep(delay)
+    
+        GPIO.output(step2in3, 0)
+        GPIO.output(step2in4, 1)
+        GPIO.output(step2in1, 1)
 
-            GPIO.output(step2in4, 1)
-            time.sleep(delay)
-            GPIO.output(step2in4, 0)    
+        time.sleep(delay)
+
+        GPIO.output(step2in4, 0) 
     servomotor("close")
 
 print('Listening...') 
@@ -180,7 +171,7 @@ while True:
                 else:
                     error = response.json()['message']
                     if("out of stock" in error):
-                        errorMessage = "Helaas, de handgels zijn op"
+                        errorMessage = handGelOutOfStockMessage
                         print(errorMessage)
                     
                     elif("user not autherized" in error):
@@ -188,11 +179,15 @@ while True:
                         print(errorMessage)
 
                     elif("Not found authentication" in error):
-                        errorMessage = "geen toegang gevonden tot deze vending machine"
+                        errorMessage = authenticationFailedMessage
+                        print(errorMessage)
+
+                    elif("limitHandSanitizerReacedMessage" in error):
+                        errorMessage= limitHandSanitizerReacedMessage
                         print(errorMessage)
 
                     else:
-                        errorMessage = "er is iets misgelopen"
+                        errorMessage = errorMessage
                         print(errorMessage)
                     pubnub.publish().channel('scanner').message("errorMessage"+errorMessage).sync()
                 data = ""
@@ -213,12 +208,8 @@ while True:
     
     if afnemen == 1:
         cv2.destroyAllWindows()
-        if stock >5:
-            stepper(1,0.004)
-            afnemen = 0
-        else:
-            stepper(2,0.004)
-            afnemen = 0
+        stepper(0.004)
+        afnemen = 0
 
 
 cap.release()
