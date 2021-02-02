@@ -1,3 +1,14 @@
+#Project 4.0 team E3 Smart Vendors 2020-2021
+#Smart vending machine code
+
+#   fill in authentication key
+#   open http://192.168.0.149/indexscanner.html
+#   scan QR-code
+#   receive hand sanitizer if code was OK
+
+#   if machine vibration is to much
+#   => Warning message is displayed for 10sec
+
 from gpiozero import LED, Button, Buzzer
 import cv2
 import re
@@ -9,6 +20,7 @@ from pubnub.callbacks import SubscribeCallback
 import requests
 import RPi.GPIO as GPIO
 
+#standard messages, these get updated if handgel is requested
 welcomeMessage = "welkom op onze smart vending machine"
 handGelMessage = "hier is uw handgel"
 handGelOutOfStockMessage = "sorry we hebben geen hand gel meer"
@@ -17,7 +29,8 @@ errorMessage = "er is iets foutgelopen"
 limitHandSanitizerReacedMessage = "maximum bereikt"
 stock = 10
 error = ""
- 
+
+#pubnub is used for the communication between site and program-
 pnconfig = PNConfiguration() 
 pnconfig.subscribe_key = 'sub-c-4a5481fa-5a4d-11eb-bf6e-f20b4949e6d2' 
 pnconfig.publish_key = 'pub-c-f9d086de-b97a-43ce-bff5-e6cb64ecf29d' 
@@ -29,7 +42,7 @@ buzzer = Buzzer(26)
 cap = cv2.VideoCapture(0)
 detector = cv2.QRCodeDetector()
 
-sensor = 21
+sensor = 21 #vibration sensor
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(sensor, GPIO.IN)
 GPIO.setwarnings(False)
@@ -46,7 +59,7 @@ allPins = [step1,step2,step3,step4,led]
 for pin in allPins:
         GPIO.setup(pin,GPIO.OUT)
 
-
+#global variables can be used inside functions
 global scanner
 scanner = 0
 
@@ -57,20 +70,34 @@ afnemen = 0
 
 authenticeren = 0
 
+#if debug == 1, debug messages will be printed in terminal
+global debug
+debug = 1
 
+#subscribe to pubnub channel
+def subscriben():
+    if debug:
+        print('DEBUG: subscribed to channel, waiting for request') 
+    pubnub.add_listener(MySubscribeCallback_ITF()) 
+    pubnub.subscribe().channels('scanner').execute()
+
+#callback function when pubnub channel receives a message
 class MySubscribeCallback_ITF(SubscribeCallback): 
         def message (self, pubnub, message): 
                 if message.message == 'scan':
                         global scanner 
                         scanner = 1
-                        print('start scanning')
-                        
+                        if debug:
+                            print('DEBUG: opening camera module')
+
+#callback function if vibration sensor gets warning                       
 def callback(sensor):
     global warning 
     warning = 1
 
+#stepper engine turns 1 round
 def stepper(delay):
-    for i in range(520):
+    for i in range(520): #changing this value will make stepper engine turn more
         GPIO.output(step1 , 1)
         GPIO.output(step2 , 1)
 
@@ -96,28 +123,27 @@ def stepper(delay):
 
         GPIO.output(step4, 0) 
 
-def subscriben():
-    print('Listening...') 
-    pubnub.add_listener(MySubscribeCallback_ITF()) 
-    pubnub.subscribe().channels('scanner').execute()
-
-
+#add callback funtion for vibration sensor
 GPIO.add_event_detect(sensor, GPIO.BOTH, bouncetime=1000)
 GPIO.add_event_callback(sensor, callback)
 
+#if all things are setup this part wil be looped forever
 while True:
+    #on startup the machine needs to be authenticated with api key
     if authenticeren == 0:
         key = input("Authentication key: ")
-        response = requests.get('https://project4-restserver.herokuapp.com/api/vendingMachine/testApiKey',headers = {'api-key':key})
-        print(response)
+        response = requests.get('https://project4-restserver.herokuapp.com/api/vendingMachine/testApiKey',headers = {'api-key':key}) #checks if api-key is in database
+        if debug:
+            print("SERVER: " + str(response))
         if 'result' in response.json():
             if  response.json()['result'] == True:
                 authenticeren = 1
-                subscriben()
+                subscriben() #if api-key is correct, subscribe to pubnub channel
         else:
             print('Authentication key wrong, try again.')
-    elif scanner == 1:
 
+    #if scanner = 1, open camera box and scan QR-code
+    elif scanner == 1:
         _, img = cap.read()
         data, bbox, _ = detector.detectAndDecode(img)
         
@@ -130,53 +156,53 @@ while True:
             if data:
                 scanner = 0
                 buzzer.beep(0.1, 0.1, 2)
-                print("Data found: " + data)
+                if debug:
+                    print("DEBUG: data found: " + data)
+                #send code of QR to restserver
                 response = requests.put('https://project4-restserver.herokuapp.com/api/vendingMachine/handgelAfnemen/',data = {'authentication':data},headers = {'api-key':key})
+                #update all standard messages
                 if('result' in response.json()):
                     welcomeMessage  = response.json()['result']['welcomeMessage']
-                    print("welcomeMessage = "+welcomeMessage)
-
                     handGelMessage = response.json()['result']['handGelMessage']
-                    print("handGelMessage = "+handGelMessage)
-
                     handGelOutOfStockMessage = response.json()['result']['handGelOutOfStockMessage']
-                    print("handGelOutOfStockMessage = " + handGelOutOfStockMessage)
-
                     authenticationFailedMessage = response.json()['result']['authenticationFailedMessage']
-                    print("authenticationFailedMessage = " + authenticationFailedMessage)
-
                     errorMessage = response.json()['result']['errorMessage']
-                    print("errorMessage = " + errorMessage)
-
                     stock = response.json()['result']['stock']
-                    print("stock = " + str(stock))
 
                     pubnub.publish().channel('scanner').message("welcomeMessage"+ welcomeMessage).sync()
                     pubnub.publish().channel('scanner').message("handGelMessage"+ handGelMessage).sync()
 
+                    if debug:
+                        print("DEBUG: updated all messages:")
+                        print("   welcomeMessage = "+welcomeMessage)
+                        print("   handGelMessage = "+handGelMessage)
+                        print("   handGelMessage = "+handGelMessage)
+                        print("   handGelOutOfStockMessage = " + handGelOutOfStockMessage)
+                        print("   authenticationFailedMessage = " + authenticationFailedMessage)
+                        print("   errorMessage = " + errorMessage)
+                        print("   stock = " + str(stock))
                     afnemen = 1
 
                 else:
                     error = response.json()['message']
                     if("out of stock" in error):
                         errorMessage = handGelOutOfStockMessage
-                        print(errorMessage)
                     
                     elif("user not autherized" in error):
                         errorMessage = "U hebt geen toegang tot deze vending machine!"
-                        print(errorMessage)
 
                     elif("Not found authentication" in error):
                         errorMessage = authenticationFailedMessage
-                        print(errorMessage)
 
                     elif("limitHandSanitizerReacedMessage" in error):
                         errorMessage= limitHandSanitizerReacedMessage
-                        print(errorMessage)
 
                     else:
                         errorMessage = errorMessage
-                        print(errorMessage)
+
+                    if debug:
+                        print("DEBUG: "+errorMessage)
+
                     pubnub.publish().channel('scanner').message("errorMessage"+errorMessage).sync()
                 data = ""
 
@@ -190,16 +216,19 @@ while True:
         break
 
     if warning == 1:
-        print("movement detected")
+        #send warning to website and restserver
+        print("WARNING: movement detected")
         pubnub.publish().channel('scanner').message("warning").sync()
         x = requests.post('https://project4-restserver.herokuapp.com/api/alert/machineAbuse', headers = {'api-key': key})
-        print(x)
+        if debug:
+            print("SERVER: " + str(x))
         x=0
         time.sleep(10)
         pubnub.publish().channel('scanner').message("warningDone").sync()
         warning = 0
     
     if afnemen == 1:
+        #turn on led and dispence hand sanitizer
         cv2.destroyAllWindows()
         GPIO.output(led,1)
         stepper(0.004)
