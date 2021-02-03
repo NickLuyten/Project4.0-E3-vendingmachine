@@ -160,6 +160,7 @@ while True:
                     print("DEBUG: data found: " + data)
                 #send code of QR to restserver
                 response = requests.put('https://project4-restserver.herokuapp.com/api/vendingMachine/handgelAfnemen/',data = {'authentication':data},headers = {'api-key':key})
+                print(response.json())
                 #update all standard messages
                 if('result' in response.json()):
                     welcomeMessage  = response.json()['result']['welcomeMessage']
@@ -182,7 +183,6 @@ while True:
                         print("   errorMessage = " + errorMessage)
                         print("   stock = " + str(stock))
                     afnemen = 1
-
                 else:
                     error = response.json()['message']
                     if("out of stock" in error):
@@ -194,7 +194,7 @@ while True:
                     elif("Not found authentication" in error):
                         errorMessage = authenticationFailedMessage
 
-                    elif("limitHandSanitizerReacedMessage" in error):
+                    elif("limit reached" in error):
                         errorMessage= limitHandSanitizerReacedMessage
 
                     else:
