@@ -2,9 +2,9 @@
 #Smart vending machine code
 
 #   fill in authentication key
-#   open http://192.168.0.149/indexscanner.html
+#   open http://localhost/indexscanner.html
 #   scan QR-code
-#   receive hand sanitizer if code was OK
+#   receive hand sanSitizer if code was OK
 
 #   if machine vibration is to much
 #   => Warning message is displayed for 10sec
@@ -196,6 +196,9 @@ while True:
 
                     elif("limit reached" in error):
                         errorMessage= limitHandSanitizerReacedMessage
+                    
+                    elif("vendingmachine not found with api-key!" in error):
+                        errorMessage= "Api key is fout, contacteer de admin!"
 
                     else:
                         errorMessage = errorMessage
