@@ -168,6 +168,7 @@ while True:
                     handGelOutOfStockMessage = response.json()['result']['handGelOutOfStockMessage']
                     authenticationFailedMessage = response.json()['result']['authenticationFailedMessage']
                     errorMessage = response.json()['result']['errorMessage']
+                    limitHandSanitizerReacedMessage = response.json()['result']['limitHandSanitizerReacedMessage']
                     stock = response.json()['result']['stock']
 
                     pubnub.publish().channel('scanner').message("welcomeMessage"+ welcomeMessage).sync()
